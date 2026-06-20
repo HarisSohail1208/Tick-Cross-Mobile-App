@@ -34,6 +34,9 @@ class TickCrossApp extends StatelessWidget {
 
 enum Player { team1, team2 }
 
+// Startup selection for human-vs-bot or human-vs-human play.
+enum GameMode { singlePlayer, doublePlayer }
+
 extension PlayerDetails on Player {
   String get symbol => this == Player.team1 ? '\u2713' : '\u2715';
 
@@ -142,6 +145,8 @@ class _GameScreenState extends State<GameScreen>
   late final GameSoundController _sounds;
   List<Player?> _board = List<Player?>.filled(9, null);
   List<int> _winningCells = [];
+  // Remembers who should open the next board instead of always using Team 1.
+  Player _startingPlayer = Player.team1;
   Player _currentPlayer = Player.team1;
   String _team1Name = 'Team 1';
   String _team2Name = 'Team 2';
@@ -149,7 +154,11 @@ class _GameScreenState extends State<GameScreen>
   int _team2Score = 0;
   int _drawScore = 0;
   int _completedMatches = 0;
+  // Single player mode turns Team 2 into a delayed medium-difficulty bot.
+  GameMode? _gameMode;
   bool _roundLocked = false;
+  bool _botThinking = false;
+  int _botTurnId = 0;
   bool _dialogVisible = false;
   bool _soundEnabled = true;
   bool _adVisible = false;
@@ -163,6 +172,9 @@ class _GameScreenState extends State<GameScreen>
       duration: const Duration(milliseconds: 650),
     );
     unawaited(_loadSoundPreference());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(_showGameModeSelection());
+    });
   }
 
   @override
@@ -175,8 +187,34 @@ class _GameScreenState extends State<GameScreen>
   String get _currentPlayerName =>
       _currentPlayer == Player.team1 ? _team1Name : _team2Name;
 
+  bool get _isSinglePlayer => _gameMode == GameMode.singlePlayer;
+
+  bool get _isBotTurn => _isSinglePlayer && _currentPlayer == Player.team2;
+
   String _nameFor(Player player) =>
       player == Player.team1 ? _team1Name : _team2Name;
+
+  // Shows once on launch before the first playable turn.
+  Future<void> _showGameModeSelection() async {
+    if (!mounted) return;
+
+    final selectedMode = await showDialog<GameMode>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const GameModeDialog(),
+    );
+
+    if (!mounted) return;
+
+    setState(() {
+      _gameMode = selectedMode ?? GameMode.doublePlayer;
+      if (_isSinglePlayer) {
+        _team2Name = 'Bot';
+      }
+    });
+
+    _startBotTurnIfNeeded();
+  }
 
   Future<void> _loadSoundPreference() async {
     await _sounds.init();
@@ -206,6 +244,14 @@ class _GameScreenState extends State<GameScreen>
   }
 
   void _onCellTap(int index) {
+    if (_gameMode == null || _roundLocked || _botThinking || _isBotTurn) {
+      return;
+    }
+
+    _playMove(index);
+  }
+
+  void _playMove(int index) {
     if (_roundLocked || _board[index] != null) return;
 
     HapticFeedback.lightImpact();
@@ -230,6 +276,92 @@ class _GameScreenState extends State<GameScreen>
       _currentPlayer =
           _currentPlayer == Player.team1 ? Player.team2 : Player.team1;
     });
+
+    if (_isBotTurn) {
+      _startBotTurnIfNeeded();
+    }
+  }
+
+  void _startBotTurnIfNeeded() {
+    if (_isBotTurn) {
+      unawaited(_startBotTurn());
+    }
+  }
+
+  // Bot turn entry point. The delay makes the AI feel intentional and blocks
+  // human taps while the bot is thinking.
+  Future<void> _startBotTurn() async {
+    if (!_isBotTurn || _roundLocked || _botThinking) return;
+
+    setState(() {
+      _botThinking = true;
+      _botTurnId++;
+    });
+
+    // Medium difficulty waits briefly, then chooses the strongest available move.
+    final botTurnId = _botTurnId;
+    final delayMs = 500 + math.Random().nextInt(301);
+    await Future<void>.delayed(Duration(milliseconds: delayMs));
+
+    if (!mounted || botTurnId != _botTurnId || !_isBotTurn || _roundLocked) {
+      return;
+    }
+
+    _makeBotMove();
+  }
+
+  // Medium bot priority: win, block, center, corner, then any empty cell.
+  void _makeBotMove() {
+    final move = _findWinningMove(Player.team2) ??
+        _findWinningMove(Player.team1) ??
+        (_board[4] == null ? 4 : null) ??
+        _findPreferredCornerMove() ??
+        _findRandomEmptyMove();
+
+    if (move == null) {
+      if (mounted) {
+        setState(() {
+          _botThinking = false;
+        });
+      }
+      return;
+    }
+
+    setState(() {
+      _botThinking = false;
+    });
+    _playMove(move);
+  }
+
+  // Used for both the bot winning check and the human block check.
+  int? _findWinningMove(Player player) {
+    for (final pattern in _winPatterns) {
+      final playerCells =
+          pattern.where((index) => _board[index] == player).length;
+      final emptyCells = pattern.where((index) => _board[index] == null);
+
+      if (playerCells == 2 && emptyCells.length == 1) {
+        return emptyCells.first;
+      }
+    }
+    return null;
+  }
+
+  int? _findPreferredCornerMove() {
+    const corners = [0, 2, 6, 8];
+    final emptyCorners =
+        corners.where((index) => _board[index] == null).toList();
+    if (emptyCorners.isEmpty) return null;
+    return emptyCorners[math.Random().nextInt(emptyCorners.length)];
+  }
+
+  int? _findRandomEmptyMove() {
+    final emptyCells = <int>[
+      for (var index = 0; index < _board.length; index++)
+        if (_board[index] == null) index,
+    ];
+    if (emptyCells.isEmpty) return null;
+    return emptyCells[math.Random().nextInt(emptyCells.length)];
   }
 
   WinResult? _findWinner() {
@@ -253,6 +385,9 @@ class _GameScreenState extends State<GameScreen>
       _roundLocked = true;
       _winningCells = result.cells;
       _completedMatches++;
+      // The losing player gets the first move in the next match.
+      _startingPlayer =
+          result.player == Player.team1 ? Player.team2 : Player.team1;
       if (result.player == Player.team1) {
         _team1Score++;
       } else {
@@ -261,7 +396,9 @@ class _GameScreenState extends State<GameScreen>
     });
 
     _lineController.forward(from: 0);
-    _showResultAndReset('\u{1F389} ${_nameFor(result.player)} Wins!');
+    unawaited(
+      _showResultAndReset('\u{1F389} ${_nameFor(result.player)} Wins!'),
+    );
   }
 
   void _finishDraw() {
@@ -272,8 +409,11 @@ class _GameScreenState extends State<GameScreen>
       _roundLocked = true;
       _drawScore++;
       _completedMatches++;
+      // Drawn matches alternate the opener from whoever started this board.
+      _startingPlayer =
+          _startingPlayer == Player.team1 ? Player.team2 : Player.team1;
     });
-    _showResultAndReset('\u{1F91D} Match Draw!');
+    unawaited(_showResultAndReset('\u{1F91D} Match Draw!'));
   }
 
   Future<void> _showResultAndReset(String message) async {
@@ -298,18 +438,26 @@ class _GameScreenState extends State<GameScreen>
     if (_dialogVisible && navigator.canPop()) {
       navigator.pop();
     }
-    _clearBoard();
-    unawaited(_showAdIfNeeded());
+    _clearBoard(startBotTurn: false);
+    await _showAdIfNeeded();
+    if (!mounted) return;
+
+    _startBotTurnIfNeeded();
   }
 
-  void _clearBoard() {
+  void _clearBoard({bool startBotTurn = true}) {
     setState(() {
       _board = List<Player?>.filled(9, null);
       _winningCells = [];
-      _currentPlayer = Player.team1;
+      _currentPlayer = _startingPlayer;
       _roundLocked = false;
+      _botThinking = false;
+      _botTurnId++;
     });
     _lineController.reset();
+    if (startBotTurn) {
+      _startBotTurnIfNeeded();
+    }
   }
 
   void _onNewMatchPressed() {
@@ -342,6 +490,8 @@ class _GameScreenState extends State<GameScreen>
   }
 
   Future<void> _editName(Player player) async {
+    if (_isSinglePlayer && player == Player.team2) return;
+
     final updatedName = await showDialog<String>(
       context: context,
       builder: (_) => NameDialog(initialName: _nameFor(player)),
@@ -419,8 +569,10 @@ class _GameScreenState extends State<GameScreen>
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 250),
                   child: TurnLabel(
-                    key: ValueKey(_currentPlayerName),
-                    text: '$_currentPlayerName Turn',
+                    key: ValueKey('$_currentPlayerName-$_botThinking'),
+                    text: _botThinking
+                        ? '$_team2Name Thinking...'
+                        : '$_currentPlayerName Turn',
                     color: _currentPlayer.color,
                   ),
                 ),
@@ -852,6 +1004,102 @@ class NewMatchButton extends StatelessWidget {
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class GameModeDialog extends StatelessWidget {
+  const GameModeDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
+        decoration: BoxDecoration(
+          color: const Color(0xff12031f),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(color: TickCrossColors.purpleGlow, width: 2),
+          boxShadow: [
+            BoxShadow(
+              color: TickCrossColors.purpleGlow.withOpacity(.65),
+              blurRadius: 34,
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Choose Game Mode',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 25,
+                fontWeight: FontWeight.w900,
+                shadows: [
+                  Shadow(color: TickCrossColors.purpleGlow, blurRadius: 22),
+                ],
+              ),
+            ),
+            const SizedBox(height: 22),
+            _GameModeButton(
+              icon: Icons.person_rounded,
+              label: 'Single Player',
+              color: TickCrossColors.tick,
+              onPressed: () => Navigator.pop(context, GameMode.singlePlayer),
+            ),
+            const SizedBox(height: 12),
+            _GameModeButton(
+              icon: Icons.groups_rounded,
+              label: 'Double Player',
+              color: TickCrossColors.cross,
+              onPressed: () => Navigator.pop(context, GameMode.doublePlayer),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _GameModeButton extends StatelessWidget {
+  const _GameModeButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: onPressed,
+        icon: Icon(icon),
+        label: Text(label),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          elevation: 14,
+          shadowColor: color,
+          textStyle: const TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w900,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
           ),
         ),
       ),

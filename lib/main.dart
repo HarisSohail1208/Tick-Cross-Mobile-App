@@ -1318,30 +1318,142 @@ class NewMatchButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       height: metrics.buttonHeight,
-      child: GestureDetector(
-        onTap: onPressed,
-        child: GlassSurface(
-          borderColor: TickCrossColors.primaryButton.withValues(alpha: .58),
-          borderRadius: 18,
-          shadowColor: TickCrossColors.primaryButton.withValues(alpha: .16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.refresh_rounded,
-                color: Colors.white.withValues(alpha: .88),
-                size: metrics.isCompact ? 19 : 21,
+      child: GlassActionButton(
+        onPressed: onPressed,
+        borderRadius: 18,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.refresh_rounded,
+              color: Colors.white.withValues(alpha: .86),
+              size: metrics.isCompact ? 18 : 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'New Match',
+              style: TextStyle(
+                color: Colors.white.withValues(alpha: .94),
+                fontSize: metrics.isCompact ? 16 : 18,
+                fontWeight: FontWeight.w700,
               ),
-              const SizedBox(width: 8),
-              Text(
-                'New Match',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: .95),
-                  fontSize: metrics.isCompact ? 16 : 18,
-                  fontWeight: FontWeight.w700,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class GlassActionButton extends StatefulWidget {
+  const GlassActionButton({
+    required this.child,
+    required this.onPressed,
+    required this.borderRadius,
+    super.key,
+  });
+
+  final Widget child;
+  final VoidCallback onPressed;
+  final double borderRadius;
+
+  @override
+  State<GlassActionButton> createState() => _GlassActionButtonState();
+}
+
+class _GlassActionButtonState extends State<GlassActionButton> {
+  bool _pressed = false;
+
+  void _setPressed(bool value) {
+    if (_pressed == value) return;
+    setState(() {
+      _pressed = value;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTapDown: (_) => _setPressed(true),
+      onTapCancel: () => _setPressed(false),
+      onTapUp: (_) => _setPressed(false),
+      onTap: widget.onPressed,
+      child: AnimatedScale(
+        scale: _pressed ? .985 : 1,
+        duration: const Duration(milliseconds: 110),
+        curve: Curves.easeOut,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(widget.borderRadius),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(widget.borderRadius),
+                border: Border.all(
+                  color: TickCrossColors.primaryButton.withValues(alpha: .5),
+                  width: 1.15,
                 ),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    Colors.white.withValues(alpha: .13),
+                    TickCrossColors.primaryButton.withValues(alpha: .16),
+                    Colors.white.withValues(alpha: .045),
+                  ],
+                  stops: const [0, .48, 1],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: .26),
+                    blurRadius: 22,
+                    offset: const Offset(0, 12),
+                  ),
+                  BoxShadow(
+                    color: TickCrossColors.primaryButton.withValues(alpha: .12),
+                    blurRadius: 30,
+                    spreadRadius: -6,
+                  ),
+                ],
               ),
-            ],
+              child: Stack(
+                children: [
+                  Positioned.fill(
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: RadialGradient(
+                          center: const Alignment(0, -.95),
+                          radius: 1.2,
+                          colors: [
+                            Colors.white.withValues(alpha: .18),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    left: 18,
+                    right: 18,
+                    top: 1,
+                    height: 1,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Colors.transparent,
+                            Colors.white.withValues(alpha: .42),
+                            Colors.transparent,
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  Center(child: widget.child),
+                ],
+              ),
+            ),
           ),
         ),
       ),

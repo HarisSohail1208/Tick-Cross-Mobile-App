@@ -1,11 +1,11 @@
 {
-    "name": "tick_cross",
-    "short_name": "tick_cross",
+    "name": "Rexwise",
+    "short_name": "Rexwise",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "A polished Tick Cross game built with Flutter.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

@@ -13,11 +13,13 @@ void main() {
 class TickCrossApp extends StatelessWidget {
   const TickCrossApp({super.key});
 
+  static const title = 'Rexwise';
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Tick Cross',
+      title: title,
       theme: ThemeData(
         brightness: Brightness.dark,
         scaffoldBackgroundColor: const Color(0xff12031f),
@@ -45,10 +47,7 @@ extension PlayerDetails on Player {
 }
 
 class WinResult {
-  const WinResult({
-    required this.player,
-    required this.cells,
-  });
+  const WinResult({required this.player, required this.cells});
 
   final Player player;
   final List<int> cells;
@@ -273,8 +272,9 @@ class _GameScreenState extends State<GameScreen>
     }
 
     setState(() {
-      _currentPlayer =
-          _currentPlayer == Player.team1 ? Player.team2 : Player.team1;
+      _currentPlayer = _currentPlayer == Player.team1
+          ? Player.team2
+          : Player.team1;
     });
 
     if (_isBotTurn) {
@@ -312,7 +312,8 @@ class _GameScreenState extends State<GameScreen>
 
   // Medium bot priority: win, block, center, corner, then any empty cell.
   void _makeBotMove() {
-    final move = _findWinningMove(Player.team2) ??
+    final move =
+        _findWinningMove(Player.team2) ??
         _findWinningMove(Player.team1) ??
         (_board[4] == null ? 4 : null) ??
         _findPreferredCornerMove() ??
@@ -336,8 +337,9 @@ class _GameScreenState extends State<GameScreen>
   // Used for both the bot winning check and the human block check.
   int? _findWinningMove(Player player) {
     for (final pattern in _winPatterns) {
-      final playerCells =
-          pattern.where((index) => _board[index] == player).length;
+      final playerCells = pattern
+          .where((index) => _board[index] == player)
+          .length;
       final emptyCells = pattern.where((index) => _board[index] == null);
 
       if (playerCells == 2 && emptyCells.length == 1) {
@@ -349,8 +351,9 @@ class _GameScreenState extends State<GameScreen>
 
   int? _findPreferredCornerMove() {
     const corners = [0, 2, 6, 8];
-    final emptyCorners =
-        corners.where((index) => _board[index] == null).toList();
+    final emptyCorners = corners
+        .where((index) => _board[index] == null)
+        .toList();
     if (emptyCorners.isEmpty) return null;
     return emptyCorners[math.Random().nextInt(emptyCorners.length)];
   }
@@ -386,8 +389,9 @@ class _GameScreenState extends State<GameScreen>
       _winningCells = result.cells;
       _completedMatches++;
       // The losing player gets the first move in the next match.
-      _startingPlayer =
-          result.player == Player.team1 ? Player.team2 : Player.team1;
+      _startingPlayer = result.player == Player.team1
+          ? Player.team2
+          : Player.team1;
       if (result.player == Player.team1) {
         _team1Score++;
       } else {
@@ -410,8 +414,9 @@ class _GameScreenState extends State<GameScreen>
       _drawScore++;
       _completedMatches++;
       // Drawn matches alternate the opener from whoever started this board.
-      _startingPlayer =
-          _startingPlayer == Player.team1 ? Player.team2 : Player.team1;
+      _startingPlayer = _startingPlayer == Player.team1
+          ? Player.team2
+          : Player.team1;
     });
     unawaited(_showResultAndReset('\u{1F91D} Match Draw!'));
   }
@@ -477,7 +482,7 @@ class _GameScreenState extends State<GameScreen>
       PageRouteBuilder<void>(
         opaque: true,
         transitionDuration: const Duration(milliseconds: 450),
-        pageBuilder: (_, animation, __) {
+        pageBuilder: (_, animation, _) {
           return FadeTransition(
             opacity: animation,
             child: const InterstitialAdScreen(),
@@ -617,7 +622,9 @@ class HeaderBar extends StatelessWidget {
         Align(
           alignment: Alignment.centerRight,
           child: NeonIconButton(
-            icon: soundEnabled ? Icons.volume_up_rounded : Icons.volume_off_rounded,
+            icon: soundEnabled
+                ? Icons.volume_up_rounded
+                : Icons.volume_off_rounded,
             tooltip: soundEnabled ? 'Sound on' : 'Sound off',
             onPressed: onSoundPressed,
           ),
@@ -676,7 +683,7 @@ class NeonIconButton extends StatelessWidget {
           border: Border.all(color: TickCrossColors.purpleGlow, width: 1.6),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withOpacity(.55),
+              color: TickCrossColors.purpleGlow.withValues(alpha: .55),
               blurRadius: 22,
             ),
           ],
@@ -716,10 +723,10 @@ class PlayerScoreCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: TickCrossColors.panel,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: color.withOpacity(.9), width: 1.8),
+          border: Border.all(color: color.withValues(alpha: .9), width: 1.8),
           boxShadow: [
-            BoxShadow(color: color.withOpacity(.55), blurRadius: 24),
-            BoxShadow(color: color.withOpacity(.22), blurRadius: 48),
+            BoxShadow(color: color.withValues(alpha: .55), blurRadius: 24),
+            BoxShadow(color: color.withValues(alpha: .22), blurRadius: 48),
           ],
         ),
         child: Column(
@@ -763,11 +770,7 @@ class PlayerScoreCard extends StatelessWidget {
 }
 
 class TurnLabel extends StatelessWidget {
-  const TurnLabel({
-    required this.text,
-    required this.color,
-    super.key,
-  });
+  const TurnLabel({required this.text, required this.color, super.key});
 
   final String text;
   final Color color;
@@ -835,7 +838,7 @@ class GameBoard extends StatelessWidget {
                   child: IgnorePointer(
                     child: AnimatedBuilder(
                       animation: lineAnimation,
-                      builder: (_, __) {
+                      builder: (_, _) {
                         return CustomPaint(
                           painter: WinningLinePainter(
                             cells: winningCells,
@@ -871,8 +874,9 @@ class BoardCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final symbolColor = player?.color ?? TickCrossColors.purpleGlow;
-    final borderColor =
-        isWinning ? TickCrossColors.win : TickCrossColors.purpleGlow;
+    final borderColor = isWinning
+        ? TickCrossColors.win
+        : TickCrossColors.purpleGlow;
 
     return GestureDetector(
       onTap: onTap,
@@ -883,12 +887,12 @@ class BoardCell extends StatelessWidget {
           color: const Color(0x18ffffff),
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: borderColor.withOpacity(isWinning ? 1 : .75),
+            color: borderColor.withValues(alpha: isWinning ? 1 : .75),
             width: isWinning ? 3.5 : 1.7,
           ),
           boxShadow: [
             BoxShadow(
-              color: borderColor.withOpacity(isWinning ? .95 : .45),
+              color: borderColor.withValues(alpha: isWinning ? .95 : .45),
               blurRadius: isWinning ? 36 : 18,
             ),
           ],
@@ -928,10 +932,7 @@ class BoardCell extends StatelessWidget {
 }
 
 class WinningLinePainter extends CustomPainter {
-  const WinningLinePainter({
-    required this.cells,
-    required this.progress,
-  });
+  const WinningLinePainter({required this.cells, required this.progress});
 
   final List<int> cells;
   final double progress;
@@ -954,7 +955,7 @@ class WinningLinePainter extends CustomPainter {
     final animatedEnd = Offset.lerp(start, end, progress)!;
 
     final glowPaint = Paint()
-      ..color = TickCrossColors.win.withOpacity(.55)
+      ..color = TickCrossColors.win.withValues(alpha: .55)
       ..strokeWidth = 18
       ..strokeCap = StrokeCap.round
       ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
@@ -976,10 +977,7 @@ class WinningLinePainter extends CustomPainter {
 }
 
 class NewMatchButton extends StatelessWidget {
-  const NewMatchButton({
-    required this.onPressed,
-    super.key,
-  });
+  const NewMatchButton({required this.onPressed, super.key});
 
   final VoidCallback onPressed;
 
@@ -1001,10 +999,7 @@ class NewMatchButton extends StatelessWidget {
         ),
         child: const Text(
           'New Match',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.w900,
-          ),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
         ),
       ),
     );
@@ -1026,7 +1021,7 @@ class GameModeDialog extends StatelessWidget {
           border: Border.all(color: TickCrossColors.purpleGlow, width: 2),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withOpacity(.65),
+              color: TickCrossColors.purpleGlow.withValues(alpha: .65),
               blurRadius: 34,
             ),
           ],
@@ -1094,10 +1089,7 @@ class _GameModeButton extends StatelessWidget {
           foregroundColor: Colors.white,
           elevation: 14,
           shadowColor: color,
-          textStyle: const TextStyle(
-            fontSize: 17,
-            fontWeight: FontWeight.w900,
-          ),
+          textStyle: const TextStyle(fontSize: 17, fontWeight: FontWeight.w900),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(16),
           ),
@@ -1108,10 +1100,7 @@ class _GameModeButton extends StatelessWidget {
 }
 
 class ResultDialog extends StatelessWidget {
-  const ResultDialog({
-    required this.message,
-    super.key,
-  });
+  const ResultDialog({required this.message, super.key});
 
   final String message;
 
@@ -1127,7 +1116,7 @@ class ResultDialog extends StatelessWidget {
           border: Border.all(color: TickCrossColors.win, width: 2),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.win.withOpacity(.75),
+              color: TickCrossColors.win.withValues(alpha: .75),
               blurRadius: 34,
             ),
           ],
@@ -1139,9 +1128,7 @@ class ResultDialog extends StatelessWidget {
             color: Colors.white,
             fontSize: 24,
             fontWeight: FontWeight.w900,
-            shadows: [
-              Shadow(color: TickCrossColors.win, blurRadius: 22),
-            ],
+            shadows: [Shadow(color: TickCrossColors.win, blurRadius: 22)],
           ),
         ),
       ),
@@ -1201,11 +1188,7 @@ class _InterstitialAdScreenState extends State<InterstitialAdScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [
-                Color(0xff070012),
-                Color(0xff2b0c4c),
-                Color(0xff001f30),
-              ],
+              colors: [Color(0xff070012), Color(0xff2b0c4c), Color(0xff001f30)],
             ),
           ),
           child: SafeArea(
@@ -1255,12 +1238,12 @@ class _AdCloseControl extends StatelessWidget {
           ? DecoratedBox(
               key: const ValueKey('close'),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(.45),
+                color: Colors.black.withValues(alpha: .45),
                 shape: BoxShape.circle,
                 border: Border.all(color: Colors.white, width: 1.4),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.white.withOpacity(.35),
+                    color: Colors.white.withValues(alpha: .35),
                     blurRadius: 18,
                   ),
                 ],
@@ -1274,12 +1257,12 @@ class _AdCloseControl extends StatelessWidget {
               key: const ValueKey('countdown'),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: Colors.black.withOpacity(.5),
+                color: Colors.black.withValues(alpha: .5),
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: TickCrossColors.purpleGlow),
                 boxShadow: [
                   BoxShadow(
-                    color: TickCrossColors.purpleGlow.withOpacity(.45),
+                    color: TickCrossColors.purpleGlow.withValues(alpha: .45),
                     blurRadius: 22,
                   ),
                 ],
@@ -1318,7 +1301,7 @@ class _AdArtwork extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withOpacity(.6),
+              color: TickCrossColors.purpleGlow.withValues(alpha: .6),
               blurRadius: 70,
               spreadRadius: 10,
             ),
@@ -1331,9 +1314,7 @@ class _AdArtwork extends StatelessWidget {
               color: Colors.white,
               fontSize: 72,
               fontWeight: FontWeight.w900,
-              shadows: [
-                Shadow(color: TickCrossColors.win, blurRadius: 28),
-              ],
+              shadows: [Shadow(color: TickCrossColors.win, blurRadius: 28)],
             ),
           ),
         ),
@@ -1378,10 +1359,7 @@ class _AdCopy extends StatelessWidget {
 }
 
 class NameDialog extends StatefulWidget {
-  const NameDialog({
-    required this.initialName,
-    super.key,
-  });
+  const NameDialog({required this.initialName, super.key});
 
   final String initialName;
 

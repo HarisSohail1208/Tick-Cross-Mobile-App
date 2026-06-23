@@ -1,17 +1,22 @@
-# tick_cross
+# Rexwise
 
-A new Flutter project.
+Rexwise is a Flutter Tick Cross game with single-player and two-player modes, sound effects, scoring, and animated win feedback.
 
-## Getting Started
+## Production Setup
 
-This project is a starting point for a Flutter application.
+Android uses the production package/application ID `com.rexwise`.
 
-A few resources to get you started if this is your first Flutter project:
+To create a signed Android release, add `android/key.properties` locally with:
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+```properties
+storeFile=/absolute/path/to/release-keystore.jks
+storePassword=...
+keyAlias=...
+keyPassword=...
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Build with:
+
+```sh
+flutter build appbundle --release
+```

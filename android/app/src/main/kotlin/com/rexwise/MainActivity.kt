@@ -1,4 +1,4 @@
-package com.example.tick_cross
+package com.rexwise
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -22,7 +22,7 @@ class TickCrossApp extends StatelessWidget {
       title: title,
       theme: ThemeData(
         brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xff12031f),
+        scaffoldBackgroundColor: TickCrossColors.backgroundBottom,
         fontFamily: 'Roboto',
         colorScheme: ColorScheme.fromSeed(
           seedColor: TickCrossColors.purpleGlow,
@@ -54,14 +54,66 @@ class WinResult {
 }
 
 class TickCrossColors {
-  static const backgroundTop = Color(0xff251047);
-  static const backgroundBottom = Color(0xff070012);
-  static const panel = Color(0x1cffffff);
-  static const purpleGlow = Color(0xffc05cff);
-  static const tick = Color(0xffff4fab);
-  static const cross = Color(0xff31f8ff);
-  static const win = Color(0xfffff35a);
-  static const draw = Color(0xff9cff7a);
+  static const backgroundTop = Color(0xff35006f);
+  static const backgroundMid = Color(0xff140024);
+  static const backgroundBottom = Color(0xff020008);
+  static const panel = Color(0x2effffff);
+  static const purpleGlow = Color(0xffff2dff);
+  static const violetHot = Color(0xff8f00ff);
+  static const tick = Color(0xffff006e);
+  static const cross = Color(0xff00f7ff);
+  static const win = Color(0xfffff000);
+  static const draw = Color(0xff39ff14);
+}
+
+class GameLayoutMetrics {
+  const GameLayoutMetrics({
+    required this.screenWidth,
+    required this.screenHeight,
+  });
+
+  final double screenWidth;
+  final double screenHeight;
+
+  bool get isCompact => screenWidth < 380 || screenHeight < 720;
+
+  bool get isWide => screenWidth >= 700;
+
+  double get horizontalPadding => isCompact ? 12 : (isWide ? 28 : 18);
+
+  double get topPadding => isCompact ? 10 : 16;
+
+  double get bottomPadding => isCompact ? 12 : 20;
+
+  double get sectionGap => isCompact ? 12 : 22;
+
+  double get smallGap => isCompact ? 10 : 18;
+
+  double get maxContentWidth => isWide ? 560 : double.infinity;
+
+  double get boardMaxSize {
+    final widthCap = screenWidth - (horizontalPadding * 2);
+    final heightCap = screenHeight * (isCompact ? .42 : .48);
+    return math.min(widthCap, heightCap).clamp(248.0, 520.0);
+  }
+
+  double get titleSize => (screenWidth * .09).clamp(27.0, 42.0);
+
+  double get turnSize => (screenWidth * .057).clamp(19.0, 26.0);
+
+  double get scoreSymbolSize => (screenWidth * .058).clamp(19.0, 25.0);
+
+  double get scoreNameSize => (screenWidth * .04).clamp(13.0, 17.0);
+
+  double get scoreNumberSize => (screenWidth * .075).clamp(25.0, 34.0);
+
+  double get scoreCardVerticalPadding => isCompact ? 10 : 14;
+
+  double get scoreCardHorizontalPadding => isCompact ? 8 : 14;
+
+  double get boardGap => (boardMaxSize * .035).clamp(8.0, 16.0);
+
+  double get buttonHeight => isCompact ? 50 : 56;
 }
 
 class GameSoundController {
@@ -517,87 +569,119 @@ class _GameScreenState extends State<GameScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment.topCenter,
-            radius: 1.3,
-            colors: [
-              TickCrossColors.backgroundTop,
-              TickCrossColors.backgroundBottom,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(18, 16, 18, 20),
-            child: Column(
-              children: [
-                HeaderBar(
-                  soundEnabled: _soundEnabled,
-                  onSoundPressed: _toggleSound,
-                ),
-                const SizedBox(height: 22),
-                Row(
-                  children: [
-                    Expanded(
-                      child: PlayerScoreCard(
-                        name: _team1Name,
-                        score: _team1Score,
-                        color: TickCrossColors.tick,
-                        symbol: Player.team1.symbol,
-                        onDoubleTap: () => _editName(Player.team1),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: PlayerScoreCard(
-                        name: 'Draw',
-                        score: _drawScore,
-                        color: TickCrossColors.draw,
-                        symbol: '=',
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: PlayerScoreCard(
-                        name: _team2Name,
-                        score: _team2Score,
-                        color: TickCrossColors.cross,
-                        symbol: Player.team2.symbol,
-                        onDoubleTap: () => _editName(Player.team2),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 22),
-                AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 250),
-                  child: TurnLabel(
-                    key: ValueKey('$_currentPlayerName-$_botThinking'),
-                    text: _botThinking
-                        ? '$_team2Name Thinking...'
-                        : '$_currentPlayerName Turn',
-                    color: _currentPlayer.color,
-                  ),
-                ),
-                const SizedBox(height: 22),
-                Expanded(
-                  child: Center(
-                    child: GameBoard(
-                      board: _board,
-                      winningCells: _winningCells,
-                      lineAnimation: _lineController,
-                      onCellTap: _onCellTap,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 18),
-                NewMatchButton(onPressed: _onNewMatchPressed),
-              ],
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final metrics = GameLayoutMetrics(
+            screenWidth: constraints.maxWidth,
+            screenHeight: constraints.maxHeight,
+          );
+
+          return DecoratedBox(
+            decoration: const BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment.topCenter,
+                radius: 1.18,
+                colors: [
+                  TickCrossColors.backgroundTop,
+                  TickCrossColors.backgroundMid,
+                  TickCrossColors.backgroundBottom,
+                ],
+                stops: [0, .45, 1],
+              ),
             ),
-          ),
-        ),
+            child: SafeArea(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: metrics.maxContentWidth,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.fromLTRB(
+                      metrics.horizontalPadding,
+                      metrics.topPadding,
+                      metrics.horizontalPadding,
+                      metrics.bottomPadding,
+                    ),
+                    child: Column(
+                      children: [
+                        HeaderBar(
+                          metrics: metrics,
+                          soundEnabled: _soundEnabled,
+                          onSoundPressed: _toggleSound,
+                        ),
+                        SizedBox(height: metrics.sectionGap),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: PlayerScoreCard(
+                                metrics: metrics,
+                                name: _team1Name,
+                                score: _team1Score,
+                                color: TickCrossColors.tick,
+                                symbol: Player.team1.symbol,
+                                onDoubleTap: () => _editName(Player.team1),
+                              ),
+                            ),
+                            SizedBox(width: metrics.isCompact ? 7 : 10),
+                            Expanded(
+                              child: PlayerScoreCard(
+                                metrics: metrics,
+                                name: 'Draw',
+                                score: _drawScore,
+                                color: TickCrossColors.draw,
+                                symbol: '=',
+                              ),
+                            ),
+                            SizedBox(width: metrics.isCompact ? 7 : 10),
+                            Expanded(
+                              child: PlayerScoreCard(
+                                metrics: metrics,
+                                name: _team2Name,
+                                score: _team2Score,
+                                color: TickCrossColors.cross,
+                                symbol: Player.team2.symbol,
+                                onDoubleTap: () => _editName(Player.team2),
+                              ),
+                            ),
+                          ],
+                        ),
+                        SizedBox(height: metrics.sectionGap),
+                        AnimatedSwitcher(
+                          duration: const Duration(milliseconds: 250),
+                          child: TurnLabel(
+                            key: ValueKey('$_currentPlayerName-$_botThinking'),
+                            metrics: metrics,
+                            text: _botThinking
+                                ? '$_team2Name Thinking...'
+                                : '$_currentPlayerName Turn',
+                            color: _currentPlayer.color,
+                          ),
+                        ),
+                        SizedBox(height: metrics.smallGap),
+                        Expanded(
+                          child: Center(
+                            child: GameBoard(
+                              metrics: metrics,
+                              board: _board,
+                              winningCells: _winningCells,
+                              lineAnimation: _lineController,
+                              onCellTap: _onCellTap,
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: metrics.smallGap),
+                        NewMatchButton(
+                          metrics: metrics,
+                          onPressed: _onNewMatchPressed,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -605,11 +689,13 @@ class _GameScreenState extends State<GameScreen>
 
 class HeaderBar extends StatelessWidget {
   const HeaderBar({
+    required this.metrics,
     required this.soundEnabled,
     required this.onSoundPressed,
     super.key,
   });
 
+  final GameLayoutMetrics metrics;
   final bool soundEnabled;
   final VoidCallback onSoundPressed;
 
@@ -618,7 +704,7 @@ class HeaderBar extends StatelessWidget {
     return Stack(
       alignment: Alignment.center,
       children: [
-        const NeonTitle(),
+        NeonTitle(metrics: metrics),
         Align(
           alignment: Alignment.centerRight,
           child: NeonIconButton(
@@ -635,24 +721,27 @@ class HeaderBar extends StatelessWidget {
 }
 
 class NeonTitle extends StatelessWidget {
-  const NeonTitle({super.key});
+  const NeonTitle({required this.metrics, super.key});
+
+  final GameLayoutMetrics metrics;
 
   @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 48),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 48),
       child: Text(
         'TICK CROSS',
         textAlign: TextAlign.center,
         style: TextStyle(
-          fontSize: 34,
+          fontSize: metrics.titleSize,
           fontWeight: FontWeight.w900,
           letterSpacing: 0,
           color: Colors.white,
-          shadows: [
+          shadows: const [
             Shadow(color: TickCrossColors.purpleGlow, blurRadius: 8),
-            Shadow(color: TickCrossColors.purpleGlow, blurRadius: 24),
-            Shadow(color: TickCrossColors.tick, blurRadius: 42),
+            Shadow(color: TickCrossColors.purpleGlow, blurRadius: 30),
+            Shadow(color: TickCrossColors.cross, blurRadius: 48),
+            Shadow(color: TickCrossColors.tick, blurRadius: 64),
           ],
         ),
       ),
@@ -680,11 +769,15 @@ class NeonIconButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: TickCrossColors.panel,
           shape: BoxShape.circle,
-          border: Border.all(color: TickCrossColors.purpleGlow, width: 1.6),
+          border: Border.all(color: TickCrossColors.purpleGlow, width: 2),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withValues(alpha: .55),
-              blurRadius: 22,
+              color: TickCrossColors.purpleGlow.withValues(alpha: .9),
+              blurRadius: 30,
+            ),
+            BoxShadow(
+              color: TickCrossColors.cross.withValues(alpha: .35),
+              blurRadius: 48,
             ),
           ],
         ),
@@ -699,6 +792,7 @@ class NeonIconButton extends StatelessWidget {
 
 class PlayerScoreCard extends StatelessWidget {
   const PlayerScoreCard({
+    required this.metrics,
     required this.name,
     required this.score,
     required this.color,
@@ -707,6 +801,7 @@ class PlayerScoreCard extends StatelessWidget {
     super.key,
   });
 
+  final GameLayoutMetrics metrics;
   final String name;
   final int score;
   final Color color;
@@ -719,14 +814,17 @@ class PlayerScoreCard extends StatelessWidget {
       onDoubleTap: onDoubleTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 250),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        padding: EdgeInsets.symmetric(
+          horizontal: metrics.scoreCardHorizontalPadding,
+          vertical: metrics.scoreCardVerticalPadding,
+        ),
         decoration: BoxDecoration(
           color: TickCrossColors.panel,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: color.withValues(alpha: .9), width: 1.8),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: color, width: 2),
           boxShadow: [
-            BoxShadow(color: color.withValues(alpha: .55), blurRadius: 24),
-            BoxShadow(color: color.withValues(alpha: .22), blurRadius: 48),
+            BoxShadow(color: color.withValues(alpha: .82), blurRadius: 28),
+            BoxShadow(color: color.withValues(alpha: .36), blurRadius: 56),
           ],
         ),
         child: Column(
@@ -736,30 +834,31 @@ class PlayerScoreCard extends StatelessWidget {
               symbol,
               style: TextStyle(
                 color: color,
-                fontSize: 22,
+                fontSize: metrics.scoreSymbolSize,
                 fontWeight: FontWeight.w900,
-                shadows: [Shadow(color: color, blurRadius: 18)],
+                shadows: [Shadow(color: color, blurRadius: 26)],
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: metrics.isCompact ? 2 : 4),
             Text(
               name,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: TextStyle(
                 color: color,
-                fontSize: 16,
+                fontSize: metrics.scoreNameSize,
                 fontWeight: FontWeight.w800,
-                shadows: [Shadow(color: color, blurRadius: 14)],
+                shadows: [Shadow(color: color, blurRadius: 20)],
               ),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: metrics.isCompact ? 3 : 6),
             Text(
               '$score',
-              style: const TextStyle(
+              style: TextStyle(
                 color: Colors.white,
-                fontSize: 30,
+                fontSize: metrics.scoreNumberSize,
                 fontWeight: FontWeight.w900,
+                shadows: const [Shadow(color: Colors.white, blurRadius: 14)],
               ),
             ),
           ],
@@ -770,8 +869,14 @@ class PlayerScoreCard extends StatelessWidget {
 }
 
 class TurnLabel extends StatelessWidget {
-  const TurnLabel({required this.text, required this.color, super.key});
+  const TurnLabel({
+    required this.metrics,
+    required this.text,
+    required this.color,
+    super.key,
+  });
 
+  final GameLayoutMetrics metrics;
   final String text;
   final Color color;
 
@@ -782,11 +887,11 @@ class TurnLabel extends StatelessWidget {
       textAlign: TextAlign.center,
       style: TextStyle(
         color: Colors.white,
-        fontSize: 23,
+        fontSize: metrics.turnSize,
         fontWeight: FontWeight.w800,
         shadows: [
-          Shadow(color: color, blurRadius: 18),
-          Shadow(color: color, blurRadius: 34),
+          Shadow(color: color, blurRadius: 24),
+          Shadow(color: color, blurRadius: 48),
         ],
       ),
     );
@@ -795,6 +900,7 @@ class TurnLabel extends StatelessWidget {
 
 class GameBoard extends StatelessWidget {
   const GameBoard({
+    required this.metrics,
     required this.board,
     required this.winningCells,
     required this.lineAnimation,
@@ -802,6 +908,7 @@ class GameBoard extends StatelessWidget {
     super.key,
   });
 
+  final GameLayoutMetrics metrics;
   final List<Player?> board;
   final List<int> winningCells;
   final Animation<double> lineAnimation;
@@ -811,7 +918,11 @@ class GameBoard extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final boardSize = math.min(constraints.maxWidth, constraints.maxHeight);
+        final availableSize = math.min(
+          constraints.maxWidth,
+          constraints.maxHeight,
+        );
+        final boardSize = math.min(availableSize, metrics.boardMaxSize);
 
         return SizedBox.square(
           dimension: boardSize,
@@ -820,13 +931,14 @@ class GameBoard extends StatelessWidget {
               GridView.builder(
                 itemCount: 9,
                 physics: const NeverScrollableScrollPhysics(),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 3,
-                  crossAxisSpacing: 13,
-                  mainAxisSpacing: 13,
+                  crossAxisSpacing: metrics.boardGap,
+                  mainAxisSpacing: metrics.boardGap,
                 ),
                 itemBuilder: (_, index) {
                   return BoardCell(
+                    boardSize: boardSize,
                     player: board[index],
                     isWinning: winningCells.contains(index),
                     onTap: () => onCellTap(index),
@@ -861,12 +973,14 @@ class GameBoard extends StatelessWidget {
 
 class BoardCell extends StatelessWidget {
   const BoardCell({
+    required this.boardSize,
     required this.player,
     required this.isWinning,
     required this.onTap,
     super.key,
   });
 
+  final double boardSize;
   final Player? player;
   final bool isWinning;
   final VoidCallback onTap;
@@ -884,16 +998,20 @@ class BoardCell extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: const Color(0x18ffffff),
-          borderRadius: BorderRadius.circular(18),
+          color: const Color(0x26ffffff),
+          borderRadius: BorderRadius.circular(14),
           border: Border.all(
-            color: borderColor.withValues(alpha: isWinning ? 1 : .75),
-            width: isWinning ? 3.5 : 1.7,
+            color: borderColor.withValues(alpha: isWinning ? 1 : .95),
+            width: isWinning ? 4 : 2.2,
           ),
           boxShadow: [
             BoxShadow(
-              color: borderColor.withValues(alpha: isWinning ? .95 : .45),
-              blurRadius: isWinning ? 36 : 18,
+              color: borderColor.withValues(alpha: isWinning ? 1 : .78),
+              blurRadius: isWinning ? 46 : 26,
+            ),
+            BoxShadow(
+              color: symbolColor.withValues(alpha: player == null ? .22 : .55),
+              blurRadius: player == null ? 28 : 52,
             ),
           ],
         ),
@@ -916,11 +1034,12 @@ class BoardCell extends StatelessWidget {
                     key: ValueKey(player),
                     style: TextStyle(
                       color: symbolColor,
-                      fontSize: 58,
+                      fontSize: (boardSize * .18).clamp(44.0, 76.0),
                       fontWeight: FontWeight.w900,
                       shadows: [
-                        Shadow(color: symbolColor, blurRadius: 16),
-                        Shadow(color: symbolColor, blurRadius: 34),
+                        Shadow(color: symbolColor, blurRadius: 18),
+                        Shadow(color: symbolColor, blurRadius: 42),
+                        Shadow(color: symbolColor, blurRadius: 72),
                       ],
                     ),
                   ),
@@ -955,14 +1074,14 @@ class WinningLinePainter extends CustomPainter {
     final animatedEnd = Offset.lerp(start, end, progress)!;
 
     final glowPaint = Paint()
-      ..color = TickCrossColors.win.withValues(alpha: .55)
-      ..strokeWidth = 18
+      ..color = TickCrossColors.win.withValues(alpha: .82)
+      ..strokeWidth = 22
       ..strokeCap = StrokeCap.round
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 18);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 22);
 
     final linePaint = Paint()
       ..color = TickCrossColors.win
-      ..strokeWidth = 7
+      ..strokeWidth = 8
       ..strokeCap = StrokeCap.round;
 
     canvas
@@ -977,29 +1096,38 @@ class WinningLinePainter extends CustomPainter {
 }
 
 class NewMatchButton extends StatelessWidget {
-  const NewMatchButton({required this.onPressed, super.key});
+  const NewMatchButton({
+    required this.metrics,
+    required this.onPressed,
+    super.key,
+  });
 
+  final GameLayoutMetrics metrics;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      height: 54,
+      height: metrics.buttonHeight,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: TickCrossColors.purpleGlow,
           foregroundColor: Colors.white,
-          elevation: 14,
+          elevation: 20,
           shadowColor: TickCrossColors.purpleGlow,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
           ),
         ),
-        child: const Text(
+        child: Text(
           'New Match',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900),
+          style: TextStyle(
+            fontSize: metrics.isCompact ? 16 : 18,
+            fontWeight: FontWeight.w900,
+            shadows: const [Shadow(color: Colors.white, blurRadius: 12)],
+          ),
         ),
       ),
     );
@@ -1011,18 +1139,25 @@ class GameModeDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dialogWidth = MediaQuery.sizeOf(context).width.clamp(280.0, 420.0);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
+        width: dialogWidth,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 24),
         decoration: BoxDecoration(
-          color: const Color(0xff12031f),
+          color: TickCrossColors.backgroundMid,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: TickCrossColors.purpleGlow, width: 2),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withValues(alpha: .65),
-              blurRadius: 34,
+              color: TickCrossColors.purpleGlow.withValues(alpha: .9),
+              blurRadius: 42,
+            ),
+            BoxShadow(
+              color: TickCrossColors.cross.withValues(alpha: .24),
+              blurRadius: 68,
             ),
           ],
         ),
@@ -1106,18 +1241,25 @@ class ResultDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dialogWidth = MediaQuery.sizeOf(context).width.clamp(280.0, 420.0);
+
     return Dialog(
       backgroundColor: Colors.transparent,
       child: Container(
+        width: dialogWidth,
         padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 26),
         decoration: BoxDecoration(
-          color: const Color(0xff12031f),
+          color: TickCrossColors.backgroundMid,
           borderRadius: BorderRadius.circular(22),
           border: Border.all(color: TickCrossColors.win, width: 2),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.win.withValues(alpha: .75),
-              blurRadius: 34,
+              color: TickCrossColors.win.withValues(alpha: .95),
+              blurRadius: 44,
+            ),
+            BoxShadow(
+              color: TickCrossColors.tick.withValues(alpha: .32),
+              blurRadius: 72,
             ),
           ],
         ),
@@ -1188,7 +1330,11 @@ class _InterstitialAdScreenState extends State<InterstitialAdScreen> {
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xff070012), Color(0xff2b0c4c), Color(0xff001f30)],
+              colors: [
+                TickCrossColors.backgroundBottom,
+                TickCrossColors.backgroundTop,
+                Color(0xff003650),
+              ],
             ),
           ),
           child: SafeArea(
@@ -1284,10 +1430,15 @@ class _AdArtwork extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final artSize = math
+        .min(size.width * .64, size.height * .34)
+        .clamp(190.0, 330.0);
+
     return Center(
       child: Container(
-        width: 250,
-        height: 250,
+        width: artSize,
+        height: artSize,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
           gradient: const SweepGradient(
@@ -1301,20 +1452,28 @@ class _AdArtwork extends StatelessWidget {
           ),
           boxShadow: [
             BoxShadow(
-              color: TickCrossColors.purpleGlow.withValues(alpha: .6),
-              blurRadius: 70,
+              color: TickCrossColors.purpleGlow.withValues(alpha: .85),
+              blurRadius: 90,
               spreadRadius: 10,
+            ),
+            BoxShadow(
+              color: TickCrossColors.cross.withValues(alpha: .45),
+              blurRadius: 130,
+              spreadRadius: 18,
             ),
           ],
         ),
-        child: const Center(
+        child: Center(
           child: Text(
             '\u2713 \u2715',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 72,
+              fontSize: artSize * .28,
               fontWeight: FontWeight.w900,
-              shadows: [Shadow(color: TickCrossColors.win, blurRadius: 28)],
+              shadows: const [
+                Shadow(color: TickCrossColors.win, blurRadius: 28),
+                Shadow(color: TickCrossColors.cross, blurRadius: 48),
+              ],
             ),
           ),
         ),
@@ -1328,23 +1487,27 @@ class _AdCopy extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final titleSize =
+        MediaQuery.sizeOf(context).width.clamp(320.0, 560.0) * .07;
+
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: const [
+      children: [
         Text(
           'Premium Break',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: Colors.white,
-            fontSize: 34,
+            fontSize: titleSize.clamp(28.0, 38.0),
             fontWeight: FontWeight.w900,
-            shadows: [
+            shadows: const [
               Shadow(color: TickCrossColors.purpleGlow, blurRadius: 24),
+              Shadow(color: TickCrossColors.cross, blurRadius: 38),
             ],
           ),
         ),
-        SizedBox(height: 10),
-        Text(
+        const SizedBox(height: 10),
+        const Text(
           'Recharge before the next neon match.',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -1385,7 +1548,7 @@ class _NameDialogState extends State<NameDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      backgroundColor: const Color(0xff160729),
+      backgroundColor: TickCrossColors.backgroundMid,
       title: const Text('Edit Name'),
       content: TextField(
         controller: _controller,
